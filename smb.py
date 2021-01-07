@@ -4,7 +4,6 @@ from PIL import ImageGrab as im
 from PIL import Image
 import time
 import sys, string, os
-import pyautogui
 from directkeys import PressKey, ReleaseKey, W, A, S, D, JUMP, RUN, L
 import pygame
 #import keras
@@ -14,7 +13,6 @@ import math
 import neural_network
 import os
 import pickle
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 x_size = 1920
 y_size = 1080
@@ -158,6 +156,8 @@ def align():
     #         break
 
 def play(mario):
+
+    # releases all keys before starting
     ReleaseKey(A)
     ReleaseKey(W)
     ReleaseKey(S)
@@ -165,9 +165,9 @@ def play(mario):
     ReleaseKey(JUMP)
     PressKey(RUN)
     i = 0
-    death_counter = 0
-    screen1 = im.grab(bbox=(500,400,800,670))
-    screen1 = screen1.resize((75,56))
+    death_counter = 0 # num times mario has died
+    screen1 = im.grab(bbox=(500,400,800,670)) #grabs the game screen
+    screen1 = screen1.resize((75,56)) # shrinks game screen for faster processing later
 
     marioAlive = True
     maxFitnessVal = 0

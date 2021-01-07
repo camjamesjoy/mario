@@ -1,6 +1,9 @@
 import ctypes
 import time
 
+
+# much of this is taken from pythonprogramming.net 's machine learning course
+# linked here https://pythonprogramming.net/game-frames-open-cv-python-plays-gta-v/
 SendInput = ctypes.windll.user32.SendInput
 
 W = 0x11

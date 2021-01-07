@@ -1,8 +1,3 @@
-# Neural Network
-# creates a new Neural network
-# import tensorflow as tf
-# from keras.models import Sequential
-# from keras.layers import Dense, Activation, Flatten
 from directkeys import PressKey, ReleaseKey, W, A, S, D, JUMP, RUN
 import numpy as np
 import math

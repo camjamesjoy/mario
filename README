@@ -1,1 +1,9 @@
-# mario
+This was my first python project, the code is a bit messy. I'm working on cleaning it up...
+
+
+In order for this to work the user needs to download and install an emulator
+that is capable of running the original Super Mario Bros on NES. I'm not going
+to go into how to do that there are many guides and websites online to help
+set up the emulator and get the rom downloaded.
+
+This program works by reading in the game screen.
