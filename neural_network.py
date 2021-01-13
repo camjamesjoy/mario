@@ -3,9 +3,16 @@ import numpy as np
 import math
 import random
 import time
+import cv2
 
-
+# match_value is the return value from the opencv template match
+# this minimum shows the minimum allowable return value when comparing the
+# current screen to the previous screen. If the return value is less than this
+# then mario is either dead or did not move this iteration
+MATCH_VALUE_MIN = 0.0005
+NUM_TIMES_MIN_CAN_BE_EXCEDED = 10
 MUTATION_CHANCE = 0.1
+MAX_INDICES_TO_ADD = 5
 
 class NeuralNetwork:
     """
@@ -65,9 +72,73 @@ class Mario(NeuralNetwork):
     """
     def __init__(self, input_layer_size, output_layer_size, hidden_layers):
         super().__init__(input_layer_size, output_layer_size, hidden_layers)
-        self.input_data = []
+        self.input_data_indices = set()
         self.input_layer_size = input_layer_size
         self.hidden_layers = hidden_layers
+        self.alive = True
+        self.num_times_min_exceded = 0
+        self.fitness = 0
+        self.screen_size = 10
+
+    @staticmethod
+    def compare_screens(screen, template, method=cv2.TM_SQDIFF_NORMED):
+        """
+        Compares 2 screens using openCV template match with cv2.TM_SQDIFF method.
+
+        Arguments:
+        screen - A numpy array representing the first screen to compate to template
+        template - A numpy array representing the template that is being compared to the screen
+        """
+        comparison = cv2.matchTemplate(screen, template, method)
+        # if the two screens are sufficiently similar mario either hasn't moved
+        # or has died. So we increment a counter, if this happens many times
+        # he is either walking into a wall or has died
+        if comparison < MATCH_VALUE_MIN:
+            self.num_times_min_exceded += 1
+        return comparison
+
+
+    def update(self, prev_screen, curr_screen):
+        """
+        Checks if the current mario is alive and updates his fitness value.
+
+        Arguments:
+        prev_screen: A numpy array that represents the screen from the previous iteration
+        curr_screen: A numpy array that represents the screen from the current iteration
+        """
+
+        black_screen = np.zeros(screen.shape, np.uint8)
+        comparison = self.compare_screens(screen, black_screen)
+        # if mario has been dead or has not moved in this many iterations
+        # we will say he has died
+        if self.num_times_min_exceded > NUM_TIMES_MIN_CAN_BE_EXCEDED:
+            self.alive = False
+        fitness += comparison
+
+    def mutate_input_data(self):
+        """
+        Randomly adds between 1 and 5 indices to the input_data_indices list
+        """
+        num_to_add = random.randint(1, MAX_INDICES_TO_ADD)
+        indices = []
+        added = 0
+        num = 0
+        while added < num_to_add:
+            num = random.randint(0, self.screen_size)
+            if num not in self.input_data_indices:
+                self.input_data_indices.add(num)
+                added += 1
+        self.input_layer_size += num_to_add
+        self.brain["input_layer"]["biases"] = np.zeros(self.input_layer_size)
+        print(len(self.brain["input_layer"]["biases"]))
+        new_weights = None
+        layer = "output_layer"
+        if "hidden_layer_0" in self.brain:
+            layer = "hidden_layer_0"
+
+        new_weights = np.random.normal(size = (num_to_add, len(self.brain[layer]["biases"])))
+        #self.brain[layer]["weights"] = np.append(self.brain[layer]["weights"], new_weights)
+        print(len(self.brain[layer]["weights"]))
 
     def play(self, screen):
         """
@@ -76,37 +147,38 @@ class Mario(NeuralNetwork):
         Arguments:
         screen: A flattened numpy array representing the screen the game is being played on
         """
-        if not self.input_data:
+        if not self.input_data_indices:
             # we need to determine what our input will be the input should be
             # a random set of pixels. This will also have a chance to mutate
-            indices = np.random.choice(screen, self.input_layer_size)
-            for index in indices:
-                self.input_data.append(screen[index])
-        self.brain["input_layer"]["biases"] = sigmoid(self.input_data)
+            for index in np.random.choice(screen, self.input_layer_size):
+                self.input_data_indices.add(index)
+            self.screen_size = screen.size
+
+        input_data = [screen[i] for i in self.input_data_indices]
+        self.brain["input_layer"]["biases"] = self.sigmoid(input_data)
         prev_biases = self.brain["input_layer"]["biases"]
 
         for hidden_layer in range(len(self.hidden_layers)):
             curr_layer = self.brain[f"hidden_layer_{hidden_layer}"]
             curr_layer["biases"] = np.matmul(prev_biases, curr_layer["weights"])
-            curr_layer["biases"] = sigmoid(curr_layer["biases"])
+            curr_layer["biases"] = self.sigmoid(curr_layer["biases"])
             prev_biases = curr_layer["biases"]
         curr_layer = self.brain["output_layer"]
         curr_layer["biases"] = np.matmul(prev_biases, curr_layer["weights"])
-        output = sigmoid(curr_layer["biases"])
-        print(output)
+        output = self.sigmoid(curr_layer["biases"])
 
         if(output[3] > 0.5 and output[4] <= 0.5):
-            forward()
+            self.forward()
         elif(output[1] > 0.5 and output[4] <= 0.5):
-            backward()
+            self.backward()
         elif(output[3] > 0.5 and output[4] > 0.5):
-            jump_forward()
+            self.jump_forward()
         elif(output[1] > 0.5 and output[4] > 0.5):
-            jump_backward()
+            self.jump_backward()
         elif(output[4] > 0.5):
-            jump()
+            self.jump()
         else:
-            stay()
+            self.stay()
 
     @staticmethod
     def sigmoid(x):
