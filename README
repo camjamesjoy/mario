@@ -6,4 +6,40 @@ that is capable of running the original Super Mario Bros on NES. I'm not going
 to go into how to do that there are many guides and websites online to help
 set up the emulator and get the rom downloaded.
 
-This program works by reading in the game screen.
+This program works by reading in the game screen. So the game will need to
+be in full screen mode once it is running.
+
+To set up the program you first need to clone the repository.
+> git clone https://github.com/camjamesjoy/mario.git
+
+Once the repository is cloned we need to create the virtual environment.
+Navigate to the repository root directory and run
+> create_env.cmd
+
+This will download all the dependencies needed to run the program.
+The last step is to make sure that the emulator is using the same keys as the
+program for movement. Most emulators will have a setting allowing you to re-map
+keys, you will need to re-map the movements to the following keys.
+
+Move left - A
+Move right - D
+Move up - W
+Move down - S
+Sprint - Left Shift
+Jump - Space Bar
+Load - L
+
+Alternatively you can change which keys move mario in directkeys.py but I don't
+recommend this.
+
+There should also be a quick save option. Make sure you set the quick save to the
+start screen. This will ensure when the current run is done the game will
+load the next run from the start screen.
+
+Now make sure the mario game is full screen and ready to be played (navigate to the first level).
+In the command line type
+
+> python smb.py
+
+Then quickly reselect the mario game, sending the command line to the background.
+Let the game run and watch mario improve!
