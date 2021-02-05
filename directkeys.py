@@ -13,6 +13,7 @@ D = 0x20
 L = 0x26
 JUMP = 0x39
 RUN = 0x1C
+ENTER = 0x1C
 
 # C struct redefinitions
 PUL = ctypes.POINTER(ctypes.c_ulong)

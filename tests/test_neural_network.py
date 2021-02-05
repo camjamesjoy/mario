@@ -45,5 +45,3 @@ def test_mutate():
             pass
     actual_mutation_percentage = num_differences / total_num_weights
     assert actual_mutation_percentage / MUTATION_CHANCE > 0.7
-test_make_nn()
-test_mutate()
