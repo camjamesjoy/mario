@@ -1,10 +1,10 @@
-from directkeys import PressKey, ReleaseKey, W, A, S, D, L, JUMP, RUN
 import numpy as np
 import math
 import random
 import time
 import cv2
 import pyautogui as pag
+from keys import Keys
 
 # match_value is the return value from the opencv template match
 # this minimum shows the minimum allowable return value when comparing the
@@ -115,7 +115,7 @@ class Mario(NeuralNetwork):
             # if mario has been dead or has not moved in this many iterations
             # we will say he has died
             self.num_times_min_exceded += 1
-            print(f"\t\tMARIO HAS EARNED A STRIKE {NUM_TIMES_MIN_CAN_BE_EXCEDED - self.num_times_min_exceded} REMAINING BEFORE HE DIES")
+            print(f"\t\tMARIO HAS EARNED A STRIKE, {NUM_TIMES_MIN_CAN_BE_EXCEDED - self.num_times_min_exceded} REMAINING BEFORE HE DIES")
         elif black_screen_comparison < MATCH_VALUE_MIN:
             self.num_time_min_exceded += 2
         else:
@@ -152,15 +152,21 @@ class Mario(NeuralNetwork):
             num = random.randint(0, len(screen))
             if num not in self.input_data_indices:
                 self.input_data_indices.add(num)
-        draw_screen = np.reshape(screen, (1080, 1920), order='C')
-        # for point in self.input_data_indices:
-        #     x = point % 1920
-        #     y = point // 1920
-        #     draw_screen = cv2.circle(draw_screen, (x,y), radius=0, color=(0, 0, 255), thickness=10)
-        #     cv2.imshow('frame',draw_screen)
-        #     if cv2.waitKey(1) & 0xFF == ord('q'):
-        #         break
         return [screen[i] for i in self.input_data_indices]
+
+    def draw_screen(self, screen):
+        """
+        takes the screen and draws the current inputs to the NN.
+        """
+
+        draw_screen = np.reshape(screen, (1080, 1920), order='C')
+        for point in self.input_data_indices:
+            x = point % 1920
+            y = point // 1920
+            draw_screen = cv2.circle(draw_screen, (x,y), radius=0, color=(0, 0, 255), thickness=10)
+            cv2.imshow('frame',draw_screen)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
     def play(self, screen):
         """
@@ -214,74 +220,66 @@ class Mario(NeuralNetwork):
 
     @staticmethod
     def forward():
-        # PressKey(D)
-        # ReleaseKey(A)
-        # ReleaseKey(S)
-        # ReleaseKey(W)
-        # ReleaseKey(JUMP)
-        pag.keyDown('d')
-        pag.keyUp('a')
-        pag.keyUp('s')
-        pag.keyUp('w')
-        pag.keyUp('space')
+        pag.keyDown(Keys.RIGHT.value)
+        pag.keyUp(Keys.LEFT.value)
+        pag.keyUp(Keys.DOWN.value)
+        pag.keyUp(Keys.UP.value)
+        pag.keyUp(Keys.JUMP.value)
 
     @staticmethod
     def backward():
-        pag.keyDown('a')
-        pag.keyUp('d')
-        pag.keyUp('s')
-        pag.keyUp('w')
-        pag.keyUp('space')
-        # PressKey(A)
-        # ReleaseKey(D)
-        # ReleaseKey(S)
-        # ReleaseKey(W)
-        # ReleaseKey(JUMP)
+        pag.keyDown(Keys.LEFT.value)
+        pag.keyUp(Keys.RIGHT.value)
+        pag.keyUp(Keys.DOWN.value)
+        pag.keyUp(Keys.UP.value)
+        pag.keyUp(Keys.JUMP.value)
 
     @staticmethod
     def jump():
-        pag.keyDown('space')
-        pag.keyUp('d')
-        pag.keyUp('s')
-        pag.keyUp('w')
-        pag.keyUp('a')
-        # PressKey(JUMP)
-        # ReleaseKey(D)
-        # ReleaseKey(S)
-        # ReleaseKey(W)
-        # ReleaseKey(A)
+        pag.keyDown(Keys.JUMP.value)
+        pag.keyUp(Keys.RIGHT.value)
+        pag.keyUp(Keys.DOWN.value)
+        pag.keyUp(Keys.UP.value)
+        pag.keyUp(Keys.LEFT.value)
 
     @staticmethod
     def jump_forward():
-        pag.keyDown('d')
-        pag.keyDown('space')
-        pag.keyUp('s')
-        pag.keyUp('w')
-        pag.keyUp('a')
+        pag.keyDown(Keys.RIGHT.value)
+        pag.keyDown(Keys.JUMP.value)
+        pag.keyUp(Keys.DOWN.value)
+        pag.keyUp(Keys.UP.value)
+        pag.keyUp(Keys.LEFT.value)
 
 
     @staticmethod
     def jump_backward():
-        pag.keyDown('a')
-        pag.keyDown('space')
-        pag.keyUp('s')
-        pag.keyUp('w')
-        pag.keyUp('d')
-        # PressKey(A)
-        # PressKey(JUMP)
-        # ReleaseKey(D)
-        # ReleaseKey(S)
-        # ReleaseKey(W)
+        pag.keyDown(Keys.LEFT.value)
+        pag.keyDown(Keys.JUMP.value)
+        pag.keyUp(Keys.DOWN.value)
+        pag.keyUp(Keys.UP.value)
+        pag.keyUp(Keys.RIGHT.value)
 
     @staticmethod
     def stay():
-        pag.keyUp('d')
-        pag.keyUp('space')
-        pag.keyUp('s')
-        pag.keyUp('w')
-        pag.keyUp('a')
-        # ReleaseKey(A)
-        # ReleaseKey(JUMP)
-        # ReleaseKey(D)
-        # ReleaseKey(S)
-        # ReleaseKey(W)
+        pag.keyUp(Keys.RIGHT.value)
+        pag.keyUp(Keys.JUMP.value)
+        pag.keyUp(Keys.DOWN.value)
+        pag.keyUp(Keys.UP.value)
+
+    @staticmethod
+    def release_all_keys():
+        """
+        Releases all the keys, used before and after playing so that all
+        keys are not being pressed
+        """
+        pag.keyUp(Keys.LEFT.value)
+        pag.keyUp(Keys.UP.value)
+        pag.keyUp(Keys.DOWN.value)
+        pag.keyUp(Keys.RIGHT.value)
+        pag.keyUp(Keys.JUMP.value)
+        pag.keyUp(Keys.RESET.value)
+        pag.keyUp(Keys.SPRINT.value)
+
+    @staticmethod
+    def reset():
+        pag.keyDown(Keys.RESET.value)

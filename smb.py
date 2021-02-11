@@ -4,7 +4,6 @@ from PIL import ImageGrab as im
 from PIL import Image
 import time
 import sys, string, os
-from directkeys import PressKey, ReleaseKey, W, A, S, D, JUMP, RUN, L, ENTER
 import random
 import math
 from neural_network import Mario
@@ -18,10 +17,11 @@ FIRST_LAYER_SIZE = 100
 HIDDEN_LAYER_ONE_SIZE = 64
 HIDDEN_LAYER_TWO_SIZE = 16
 OUTPUT_LAYER_SIZE = 6
-MUTATION_SELECTION_CHANCE = 0.1 # chance that a mario will be selected for mutation
-POPULATION_SIZE = 100
+MUTATION_CHANCE = 0.1 # chance that a mario will be selected for mutation
+POPULATION_SIZE = 25
 START_WAIT_TIME = 3
-
+INPUT_DELAY = 0.75 # approximate time that the matrix multiplication and other calculations takes.
+SAVED_MARIO_FOLDER = "saved_marios"
 
 class MarioGame:
     """
@@ -53,51 +53,26 @@ class MarioGame:
             print("PLAYING MARIO")
             population = self.play_mario(population)
             population.sort(key=lambda Mario: Mario.fitness) # sort population by fitness
-            self.save_mario(population[0], "mario" + str(iteration))
+            self.save_mario(population[-1], f"{SAVED_MARIO_FOLDER}\\mario" + str(iteration))
+            print(f"THE BEST MARIO SO FAR HAS A FITNESS FUNCTION OF {population[-1].fitness}")
             population = self.evolve_mario(population)
-            print(f"THE BEST MARIO SO FAR HAS A FITNESS FUNCTION OF {population[0].fitness}")
 
     def evolve_mario(self, population):
 
-        population = next_population[self.population_size // 2 : self.population_size] # sve the best half of marios
-        population = population + self.create_population(population_size // 2)
-        best = population[0] # don't want to mutate the best one
+        population = population[self.population_size // 2 : self.population_size] # sve the best half of marios
+        best = population[len(population) - 1] # don't want to mutate the best one
+        population = population + self.create_population(self.population_size // 2)
+
         for mario in population:
             if random.random() < MUTATION_CHANCE and mario is not best:
                 # mario has been selected for mutation
                 mario.mutate()
+                print("\t\t\t WHOA MARIO IS EVOLVING")
             if random.random() < MUTATION_CHANCE and mario is not best:
-                # Add inputs.
+                # Inputs selected for mutation
                 mario.mutate_input_data()
-            # This part isn't working rn
+                print("\t\t\t WHOA MARIO's INPUTS ARE EVOLVING")
         return population
-
-    @staticmethod
-    def release_all_keys():
-        """
-        Releases all the keys, used before and after playing so that all
-        keys are not being pressed
-        """
-        # ReleaseKey(A)
-        # ReleaseKey(W)
-        # ReleaseKey(S)
-        # ReleaseKey(D)
-        # ReleaseKey(JUMP)
-        # ReleaseKey(L)
-        # PressKey(RUN)
-        pag.keyUp('a')
-        pag.keyUp('w')
-        pag.keyUp('s')
-        pag.keyUp('d')
-        pag.keyUp('space')
-        pag.keyUp('l')
-        pag.keyUp('shiftleft')
-        pag.keyUp('enter')
-
-
-    @staticmethod
-    def reset():
-        pag.keyDown('l')
 
     def play_mario(self, population):
         """
@@ -109,22 +84,24 @@ class MarioGame:
         prev_screen = im.grab(bbox=(0, 0, self.x_size, self.y_size))
         prev_screen = cv2.cvtColor(np.array(prev_screen), cv2.COLOR_RGB2GRAY) # converts screen to gray so that the screen array is smaller
         for i, mario in enumerate(population):
-            self.reset()
-            self.release_all_keys()
+            mario.reset()
+            mario.release_all_keys()
             # play the game
             mario.alive = True
+            mario.fitness = 0
             mario.num_times_min_exceded = 0
             print(f"\tmario {i} is starting")
-            start_time = time.time()
             while mario.alive:
+                start = time.time()
                 curr_screen = im.grab(bbox=(0, 0, self.x_size, self.y_size))
                 curr_screen = cv2.cvtColor(np.array(curr_screen), cv2.COLOR_RGB2GRAY)
                 mario.play(curr_screen.flatten()) # this won't work right now lol
                 mario.update(prev_screen, curr_screen)
                 prev_screen = curr_screen
-                end_time = time.time()
-                start_time = end_time
-            self.release_all_keys()
+                diff = time.time() - start
+                while diff < INPUT_DELAY:
+                    diff = time.time() - start
+            mario.release_all_keys()
             print(f"\tmario {i} has died he had a fitness function of {mario.fitness}\n")
         return population
 
@@ -147,5 +124,11 @@ class MarioGame:
 
 if __name__ == "__main__":
     time.sleep(START_WAIT_TIME)
+    if len(sys.argv) >= 2:
+        for saved_mario in sys.argv[1:]:
+            mario = MarioGame()
+            mario_brain = mario.load_mario(saved_mario)
+            mario.play_mario([mario_brain])
+        quit()
     my_mario = MarioGame()
     my_mario.learn_to_play_mario()
