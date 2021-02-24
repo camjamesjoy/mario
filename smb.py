@@ -10,17 +10,18 @@ from neural_network import Mario
 import os
 import pickle
 from screeninfo import get_monitors
-import pyautogui as pag
+import keyboard
+from multiprocessing import Process, Pipe
 
 POPULATION_ITERATIONS = 500
 FIRST_LAYER_SIZE = 100
 HIDDEN_LAYER_ONE_SIZE = 64
 HIDDEN_LAYER_TWO_SIZE = 16
-OUTPUT_LAYER_SIZE = 6
+OUTPUT_LAYER_SIZE = 3
 MUTATION_CHANCE = 0.1 # chance that a mario will be selected for mutation
 POPULATION_SIZE = 25
 START_WAIT_TIME = 3
-INPUT_DELAY = 0.75 # approximate time that the matrix multiplication and other calculations takes.
+ # How often the fitness function will be updated in seconds
 SAVED_MARIO_FOLDER = "saved_marios"
 
 class MarioGame:
@@ -31,6 +32,7 @@ class MarioGame:
         monitor = get_monitors()[0] # grabs the first moniter
         self.x_size = monitor.x # x size of first monitor, will be used to read game screen
         self.y_size = monitor.height # y size of first monitor, will be used to read game screen
+        self.screen_size = self.x_size * self.y_size - 1
         self.population_size = POPULATION_SIZE
 
 
@@ -42,9 +44,9 @@ class MarioGame:
         to them
         """
         population = []
-        hidden_layers = [HIDDEN_LAYER_ONE_SIZE, HIDDEN_LAYER_TWO_SIZE]
+        hidden_layers = []
         for _ in range(size):
-            population.append(Mario(FIRST_LAYER_SIZE, OUTPUT_LAYER_SIZE, hidden_layers))
+            population.append(Mario(FIRST_LAYER_SIZE, OUTPUT_LAYER_SIZE, hidden_layers, self.screen_size))
         return population
 
     def learn_to_play_mario(self):
@@ -81,8 +83,6 @@ class MarioGame:
         what its fitness function will be.
         """
         # need to read in the game screen
-        prev_screen = im.grab(bbox=(0, 0, self.x_size, self.y_size))
-        prev_screen = cv2.cvtColor(np.array(prev_screen), cv2.COLOR_RGB2GRAY) # converts screen to gray so that the screen array is smaller
         for i, mario in enumerate(population):
             mario.reset()
             mario.release_all_keys()
@@ -91,17 +91,26 @@ class MarioGame:
             mario.fitness = 0
             mario.num_times_min_exceded = 0
             print(f"\tmario {i} is starting")
+            start = time.time()
+            parent_conn, child_conn = Pipe()
+            fitness_process = Process(target=mario.update, args = (0,0,self.x_size,self.y_size, child_conn))
+            fitness_process.start()
             while mario.alive:
-                start = time.time()
                 curr_screen = im.grab(bbox=(0, 0, self.x_size, self.y_size))
                 curr_screen = cv2.cvtColor(np.array(curr_screen), cv2.COLOR_RGB2GRAY)
-                mario.play(curr_screen.flatten()) # this won't work right now lol
-                mario.update(prev_screen, curr_screen)
-                prev_screen = curr_screen
-                diff = time.time() - start
-                while diff < INPUT_DELAY:
-                    diff = time.time() - start
+                mario.play(curr_screen.flatten())
+                if parent_conn.poll():
+                    update = parent_conn.recv()
+                    mario.alive = update[0]
+                    mario.fitness = update[1]
+                if keyboard.is_pressed('Esc'):
+                    print("escape key pressed. exiting")
+                    mario.release_all_keys()
+                    fitness_process.join()
+                    sys.exit(0)
+
             mario.release_all_keys()
+            fitness_process.join()
             print(f"\tmario {i} has died he had a fitness function of {mario.fitness}\n")
         return population
 

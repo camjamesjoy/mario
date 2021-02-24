@@ -3,17 +3,25 @@ import math
 import random
 import time
 import cv2
-import pyautogui as pag
+from pynput.keyboard import Controller
 from keys import Keys
 
 # match_value is the return value from the opencv template match
 # this minimum shows the minimum allowable return value when comparing the
 # current screen to the previous screen. If the return value is less than this
 # then mario is either dead or did not move this iteration
-MATCH_VALUE_MIN = 0.005
-NUM_TIMES_MIN_CAN_BE_EXCEDED = 3
+MIN_PIXELS_MOVED = 50
+NUM_TIMES_MIN_CAN_BE_EXCEDED = 5
 MUTATION_CHANCE = 0.1
 MAX_INDICES_TO_ADD = 5
+FORWARD = 0
+BACKWARD = 1
+JUMP = 2
+SLICE_WIDTH = 5
+MAX_PIXELS_POSSIBLE = 700
+UPDATE_TIMER = 0.5
+
+keyboard = Controller()
 
 class NeuralNetwork:
     """
@@ -71,7 +79,7 @@ class Mario(NeuralNetwork):
     """
     A class that uses a NeuralNetwork to play mario
     """
-    def __init__(self, input_layer_size, output_layer_size, hidden_layers):
+    def __init__(self, input_layer_size, output_layer_size, hidden_layers, screen_size):
         super().__init__(input_layer_size, output_layer_size, hidden_layers)
         self.input_data_indices = set()
         self.input_layer_size = input_layer_size
@@ -79,50 +87,49 @@ class Mario(NeuralNetwork):
         self.alive = True
         self.num_times_min_exceded = 0
         self.fitness = 0
-        self.screen_size = 10
+        self.screen_size = screen_size
+        self.prev_slice = np.array([])
 
-    @staticmethod
-    def compare_screens(screen, template, method=cv2.TM_SQDIFF_NORMED):
-        """
-        Compares 2 screens using openCV template match with cv2.TM_SQDIFF method.
-
-        Arguments:
-        screen - A numpy array representing the first screen to compate to template
-        template - A numpy array representing the template that is being compared to the screen
-        """
-        comparison = cv2.matchTemplate(screen, template, method)
-        # if the two screens are sufficiently similar mario either hasn't moved
-        # or has died. So we increment a counter, if this happens many times
-        # he is either walking into a wall or has died
-        if comparison < MATCH_VALUE_MIN:
-            self.num_times_min_exceded += 1
-        return comparison
-
-
-    def update(self, prev_screen, curr_screen):
+    def update(self, x_start, y_start, x_end, y_end, conn):
         """
         Checks if the current mario is alive and updates his fitness value.
+        Fitness value is an estimate of how many pixels the screen has shifted
 
         Arguments:
-        prev_screen: A numpy array that represents the screen from the previous iteration
-        curr_screen: A numpy array that represents the screen from the current iteration
+        curr_screen: A numpy array that represents the gray screen from the current iteration
         """
-
-        black_screen = np.zeros(curr_screen.shape, np.uint8)
-        fitness_comparison = cv2.matchTemplate(curr_screen, prev_screen, cv2.TM_SQDIFF_NORMED)
-        black_screen_comparison = cv2.matchTemplate(curr_screen, black_screen, cv2.TM_SQDIFF_NORMED)
-        if fitness_comparison < MATCH_VALUE_MIN:
-            # if mario has been dead or has not moved in this many iterations
-            # we will say he has died
-            self.num_times_min_exceded += 1
-            print(f"\t\tMARIO HAS EARNED A STRIKE, {NUM_TIMES_MIN_CAN_BE_EXCEDED - self.num_times_min_exceded} REMAINING BEFORE HE DIES")
-        elif black_screen_comparison < MATCH_VALUE_MIN:
-            self.num_time_min_exceded += 2
-        else:
-            fitness_comparison = cv2.matchTemplate(curr_screen, prev_screen, cv2.TM_SQDIFF_NORMED)
-            self.fitness += fitness_comparison
-        if self.num_times_min_exceded >= NUM_TIMES_MIN_CAN_BE_EXCEDED:
-            self.alive = False
+        from PIL import ImageGrab as im
+        while self.alive:
+            start = time.time()
+            curr_screen = im.grab(bbox=(x_start, y_start, x_end, y_end))
+            curr_screen = cv2.cvtColor(np.array(curr_screen), cv2.COLOR_RGB2GRAY)
+            min_non_zeros = curr_screen.shape[0] * SLICE_WIDTH
+            min_col = -1
+            if self.prev_slice.size != 0:
+                for i in range(curr_screen.shape[1] - SLICE_WIDTH):
+                    curr_slice = curr_screen[:,i:i+SLICE_WIDTH]
+                    diff = curr_slice - self.prev_slice
+                    non_zeros = np.count_nonzero(diff)
+                    pixels_moved = curr_screen.shape[1] - SLICE_WIDTH - i
+                    if non_zeros <= min_non_zeros and pixels_moved < MAX_PIXELS_POSSIBLE:
+                        min_non_zeros = non_zeros
+                        min_col = i
+            self.prev_slice = curr_screen[:,-SLICE_WIDTH:]
+            if min_col == -1:
+                continue
+            pixels_moved = curr_screen.shape[1] - SLICE_WIDTH - (min_col + 1)
+            self.fitness += pixels_moved * UPDATE_TIMER
+            if pixels_moved < MIN_PIXELS_MOVED:
+                self.num_times_min_exceded += 1
+                print(f"\t\tMARIO HAS EARNED A STRIKE BECAUSE HE ONLY TRAVEL {pixels_moved} PIXELS, {NUM_TIMES_MIN_CAN_BE_EXCEDED - self.num_times_min_exceded} REMAINING UNTIL HE DIES")
+            if self.num_times_min_exceded >= NUM_TIMES_MIN_CAN_BE_EXCEDED:
+                self.alive = False
+                conn.send([False, self.fitness])
+                conn.close()
+            end = time.time()
+            while end - start < UPDATE_TIMER:
+                end = time.time()
+            start = end
 
     def mutate_input_data(self):
         """
@@ -159,12 +166,12 @@ class Mario(NeuralNetwork):
         takes the screen and draws the current inputs to the NN.
         """
 
-        draw_screen = np.reshape(screen, (1080, 1920), order='C')
-        for point in self.input_data_indices:
-            x = point % 1920
-            y = point // 1920
-            draw_screen = cv2.circle(draw_screen, (x,y), radius=0, color=(0, 0, 255), thickness=10)
-            cv2.imshow('frame',draw_screen)
+        #draw_screen = np.reshape(screen, (1080, 1920), order='C')
+        while True: #for point in self.input_data_indices:
+            #x = point % 1920
+            #y = point // 1920
+            #draw_screen = cv2.circle(draw_screen, (x,y), radius=0, color=(0, 0, 255), thickness=10)
+            cv2.imshow('frame',screen)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
@@ -175,7 +182,7 @@ class Mario(NeuralNetwork):
         Arguments:
         screen: A flattened numpy array representing the screen the game is being played on
         """
-
+        self.screen_size = len(screen)
         input_data = self.get_input_layer_from_screen(screen)
         self.brain["input_layer"]["biases"] = self.sigmoid(input_data)
         prev_biases = self.brain["input_layer"]["biases"]
@@ -189,24 +196,25 @@ class Mario(NeuralNetwork):
         curr_layer["biases"] = np.matmul(prev_biases, curr_layer["weights"])
         output = self.sigmoid(curr_layer["biases"])
 
-        if(output[3] > 0.5 and output[4] <= 0.5):
-            self.forward()
-        elif(output[1] > 0.5 and output[4] <= 0.5):
-            self.backward()
-        elif(output[3] > 0.5 and output[4] > 0.5):
-            self.jump_forward()
-        elif(output[1] > 0.5 and output[4] > 0.5):
-            self.jump_backward()
-        elif(output[4] > 0.5):
-            self.jump()
-        else:
-            self.stay()
+        next_action = self.stay
+        if(output[FORWARD] >= 0.5 and output[BACKWARD] < 0.5 and output[JUMP] < 0.5):
+            next_action = self.forward
+        elif(output[FORWARD] < 0.5 and output[BACKWARD] >= 0.5 and output[JUMP] < 0.5):
+            next_action = self.backward
+        elif(output[FORWARD] >= 0.5 and output[BACKWARD] < 0.5 and output[JUMP] >= 0.5):
+            next_action = self.jump_forward
+        elif(output[FORWARD] < 0.5 and output[BACKWARD] >= 0.5 and output[JUMP] >= 0.5):
+            next_action = self.jump_backward
+        elif(output[FORWARD] < 0.5 and output[BACKWARD] < 0.5 and output[JUMP] >= 0.5):
+            next_action = self.jump
+        next_action()
 
     @staticmethod
     def sigmoid(x):
         """
         Function that maps the input value, x, to a value between 1 and 0
         """
+
         for j in range(len(x)):
             if (x[j] > 170):
                 x[j] = 1
@@ -214,57 +222,57 @@ class Mario(NeuralNetwork):
                 x[j] = 0
             else:
                 x[j] = 1/(1+math.exp(-x[j]))
+
         return x
 
 
 
     @staticmethod
     def forward():
-        pag.keyDown(Keys.RIGHT.value)
-        pag.keyUp(Keys.LEFT.value)
-        pag.keyUp(Keys.DOWN.value)
-        pag.keyUp(Keys.UP.value)
-        pag.keyUp(Keys.JUMP.value)
+        keyboard.press(Keys.SPRINT.value)
+        keyboard.press(Keys.RIGHT.value)
+        keyboard.release(Keys.LEFT.value)
+        keyboard.release(Keys.JUMP.value)
 
     @staticmethod
     def backward():
-        pag.keyDown(Keys.LEFT.value)
-        pag.keyUp(Keys.RIGHT.value)
-        pag.keyUp(Keys.DOWN.value)
-        pag.keyUp(Keys.UP.value)
-        pag.keyUp(Keys.JUMP.value)
+        keyboard.press(Keys.SPRINT.value)
+        keyboard.press(Keys.LEFT.value)
+        keyboard.release(Keys.RIGHT.value)
+        keyboard.release(Keys.JUMP.value)
 
     @staticmethod
     def jump():
-        pag.keyDown(Keys.JUMP.value)
-        pag.keyUp(Keys.RIGHT.value)
-        pag.keyUp(Keys.DOWN.value)
-        pag.keyUp(Keys.UP.value)
-        pag.keyUp(Keys.LEFT.value)
+        keyboard.press(Keys.JUMP.value)
+        time.sleep(0.3)
+        keyboard.release(Keys.JUMP.value)
+        keyboard.release(Keys.RIGHT.value)
+        keyboard.release(Keys.LEFT.value)
 
     @staticmethod
     def jump_forward():
-        pag.keyDown(Keys.RIGHT.value)
-        pag.keyDown(Keys.JUMP.value)
-        pag.keyUp(Keys.DOWN.value)
-        pag.keyUp(Keys.UP.value)
-        pag.keyUp(Keys.LEFT.value)
-
+        keyboard.press(Keys.SPRINT.value)
+        keyboard.press(Keys.RIGHT.value)
+        keyboard.press(Keys.JUMP.value)
+        time.sleep(0.3)
+        keyboard.release(Keys.JUMP.value)
+        keyboard.release(Keys.LEFT.value)
 
     @staticmethod
     def jump_backward():
-        pag.keyDown(Keys.LEFT.value)
-        pag.keyDown(Keys.JUMP.value)
-        pag.keyUp(Keys.DOWN.value)
-        pag.keyUp(Keys.UP.value)
-        pag.keyUp(Keys.RIGHT.value)
+        keyboard.press(Keys.SPRINT.value)
+        keyboard.press(Keys.LEFT.value)
+        keyboard.press(Keys.JUMP.value)
+        time.sleep(0.3)
+        keyboard.release(Keys.JUMP.value)
+        keyboard.release(Keys.RIGHT.value)
+
 
     @staticmethod
     def stay():
-        pag.keyUp(Keys.RIGHT.value)
-        pag.keyUp(Keys.JUMP.value)
-        pag.keyUp(Keys.DOWN.value)
-        pag.keyUp(Keys.UP.value)
+        keyboard.release(Keys.RIGHT.value)
+        keyboard.release(Keys.JUMP.value)
+        keyboard.release(Keys.LEFT.value)
 
     @staticmethod
     def release_all_keys():
@@ -272,14 +280,14 @@ class Mario(NeuralNetwork):
         Releases all the keys, used before and after playing so that all
         keys are not being pressed
         """
-        pag.keyUp(Keys.LEFT.value)
-        pag.keyUp(Keys.UP.value)
-        pag.keyUp(Keys.DOWN.value)
-        pag.keyUp(Keys.RIGHT.value)
-        pag.keyUp(Keys.JUMP.value)
-        pag.keyUp(Keys.RESET.value)
-        pag.keyUp(Keys.SPRINT.value)
+        keyboard.release(Keys.LEFT.value)
+        keyboard.release(Keys.UP.value)
+        keyboard.release(Keys.DOWN.value)
+        keyboard.release(Keys.RIGHT.value)
+        keyboard.release(Keys.JUMP.value)
+        keyboard.release(Keys.RESET.value)
+        keyboard.release(Keys.SPRINT.value)
 
-    @staticmethod
-    def reset():
-        pag.keyDown(Keys.RESET.value)
+    def reset(self):
+        keyboard.press(Keys.RESET.value)
+        time.sleep(0.5)
