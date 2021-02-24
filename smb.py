@@ -1,5 +1,7 @@
 import numpy as np
 import cv2
+import argparse
+
 from PIL import ImageGrab as im
 from PIL import Image
 import time
@@ -103,7 +105,7 @@ class MarioGame:
                     update = parent_conn.recv()
                     mario.alive = update[0]
                     mario.fitness = update[1]
-                if keyboard.is_pressed('Esc'):
+                if keyboard.is_pressed("Esc"):
                     print("escape key pressed. exiting")
                     mario.release_all_keys()
                     fitness_process.join()
@@ -115,11 +117,11 @@ class MarioGame:
         return population
 
     def save_mario(self, mario, filename):
-        with open(filename, 'wb') as output:  # Overwrites any existing file.
+        with open(filename, "wb") as output:  # Overwrites any existing file.
             pickle.dump(mario, output, pickle.HIGHEST_PROTOCOL)
 
     def load_mario(self, filename):
-        with open(filename, 'rb') as mario_brain:
+        with open(filename, "rb") as mario_brain:
              mario = pickle.load(mario_brain)
              return mario
 
@@ -133,8 +135,13 @@ class MarioGame:
 
 if __name__ == "__main__":
     time.sleep(START_WAIT_TIME)
-    if len(sys.argv) >= 2:
-        for saved_mario in sys.argv[1:]:
+    parser = argparse.ArgumentParser(description="Play Mario!")
+    # parser.add_argument("--verbose", "-v", action="store_true", required=False)
+    parser.add_argument("--mario", "-m", required=False, nargs='+', help="Path to a saved mario, program will load that mario and play it then exit")
+    args = parser.parse_args()
+    marios = args.mario
+    if marios:
+        for saved_mario in marios:
             mario = MarioGame()
             mario_brain = mario.load_mario(saved_mario)
             mario.play_mario([mario_brain])

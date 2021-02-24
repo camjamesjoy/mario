@@ -48,4 +48,4 @@ At the end of  each population the best mario will be saved in the saved_marios
 directory, to load a mario rather than create a new population you just have
 to pass the saved object as a command line argument
 
-> python smb.py saved_mario
+> python smb.py -m saved_mario

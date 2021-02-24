@@ -21,8 +21,7 @@ HEIGHT = 3
 SLICE_WIDTH = 5
 MAX_PIXELS_POSSIBLE = 700
 UPDATE_TIMER = 0.5
-
-keyboard = Controller()
+KEYBOARD = Controller()
 
 class NeuralNetwork:
     """
@@ -125,7 +124,7 @@ class Mario(NeuralNetwork):
                 print(f"\t\tMARIO HAS EARNED A STRIKE BECAUSE HE ONLY TRAVELED {pixels_moved} PIXELS, {NUM_TIMES_MIN_CAN_BE_EXCEDED - self.num_times_min_exceded} REMAINING UNTIL HE DIES")
             else:
                 self.num_times_min_exceded = 0 # reset the min if mario moved forward more then the min number of pixels
-                print("\t\t RESETING COUNTER BECAUSE MARIO MOVED FORWARD")
+                print("\t\tRESETING COUNTER BECAUSE MARIO MOVED FORWARD")
             if self.num_times_min_exceded >= NUM_TIMES_MIN_CAN_BE_EXCEDED:
                 self.alive = False
                 conn.send([False, self.fitness])
@@ -238,50 +237,50 @@ class Mario(NeuralNetwork):
 
     @staticmethod
     def forward():
-        keyboard.press(Keys.SPRINT.value)
-        keyboard.press(Keys.RIGHT.value)
-        keyboard.release(Keys.LEFT.value)
-        keyboard.release(Keys.JUMP.value)
+        KEYBOARD.press(Keys.SPRINT.value)
+        KEYBOARD.press(Keys.RIGHT.value)
+        KEYBOARD.release(Keys.LEFT.value)
+        KEYBOARD.release(Keys.JUMP.value)
 
     @staticmethod
     def backward():
-        keyboard.press(Keys.SPRINT.value)
-        keyboard.press(Keys.LEFT.value)
-        keyboard.release(Keys.RIGHT.value)
-        keyboard.release(Keys.JUMP.value)
+        KEYBOARD.press(Keys.SPRINT.value)
+        KEYBOARD.press(Keys.LEFT.value)
+        KEYBOARD.release(Keys.RIGHT.value)
+        KEYBOARD.release(Keys.JUMP.value)
 
     @staticmethod
     def jump(height):
-        keyboard.press(Keys.JUMP.value)
+        KEYBOARD.press(Keys.JUMP.value)
         time.sleep(height)
-        keyboard.release(Keys.JUMP.value)
-        keyboard.release(Keys.RIGHT.value)
-        keyboard.release(Keys.LEFT.value)
+        KEYBOARD.release(Keys.JUMP.value)
+        KEYBOARD.release(Keys.RIGHT.value)
+        KEYBOARD.release(Keys.LEFT.value)
 
     @staticmethod
     def jump_forward(height):
-        keyboard.press(Keys.SPRINT.value)
-        keyboard.press(Keys.RIGHT.value)
-        keyboard.press(Keys.JUMP.value)
+        KEYBOARD.press(Keys.SPRINT.value)
+        KEYBOARD.press(Keys.RIGHT.value)
+        KEYBOARD.press(Keys.JUMP.value)
         time.sleep(height)
-        keyboard.release(Keys.JUMP.value)
-        keyboard.release(Keys.LEFT.value)
+        KEYBOARD.release(Keys.JUMP.value)
+        KEYBOARD.release(Keys.LEFT.value)
 
     @staticmethod
     def jump_backward(height):
-        keyboard.press(Keys.SPRINT.value)
-        keyboard.press(Keys.LEFT.value)
-        keyboard.press(Keys.JUMP.value)
+        KEYBOARD.press(Keys.SPRINT.value)
+        KEYBOARD.press(Keys.LEFT.value)
+        KEYBOARD.press(Keys.JUMP.value)
         time.sleep(height)
-        keyboard.release(Keys.JUMP.value)
-        keyboard.release(Keys.RIGHT.value)
+        KEYBOARD.release(Keys.JUMP.value)
+        KEYBOARD.release(Keys.RIGHT.value)
 
 
     @staticmethod
     def stay():
-        keyboard.release(Keys.RIGHT.value)
-        keyboard.release(Keys.JUMP.value)
-        keyboard.release(Keys.LEFT.value)
+        KEYBOARD.release(Keys.RIGHT.value)
+        KEYBOARD.release(Keys.JUMP.value)
+        KEYBOARD.release(Keys.LEFT.value)
 
     @staticmethod
     def release_all_keys():
@@ -289,14 +288,14 @@ class Mario(NeuralNetwork):
         Releases all the keys, used before and after playing so that all
         keys are not being pressed
         """
-        keyboard.release(Keys.LEFT.value)
-        keyboard.release(Keys.UP.value)
-        keyboard.release(Keys.DOWN.value)
-        keyboard.release(Keys.RIGHT.value)
-        keyboard.release(Keys.JUMP.value)
-        keyboard.release(Keys.RESET.value)
-        keyboard.release(Keys.SPRINT.value)
+        KEYBOARD.release(Keys.LEFT.value)
+        KEYBOARD.release(Keys.UP.value)
+        KEYBOARD.release(Keys.DOWN.value)
+        KEYBOARD.release(Keys.RIGHT.value)
+        KEYBOARD.release(Keys.JUMP.value)
+        KEYBOARD.release(Keys.RESET.value)
+        KEYBOARD.release(Keys.SPRINT.value)
 
     def reset(self):
-        keyboard.press(Keys.RESET.value)
-        time.sleep(0.5)
+        KEYBOARD.press(Keys.RESET.value)
+        time.sleep(UPDATE_TIMER)
