@@ -16,6 +16,10 @@ Once the repository is cloned we need to create the virtual environment.
 Navigate to the repository root directory and run
 > create_env.cmd
 
+Activate the virtual environment.
+> env\mario\Scripts\activate
+
+
 This will download all the dependencies needed to run the program.
 The last step is to make sure that the emulator is using the same keys as the
 program for movement. Most emulators will have a setting allowing you to re-map
@@ -23,14 +27,10 @@ keys, you will need to re-map the movements to the following keys.
 
 Move left - A
 Move right - D
-Move up - W
-Move down - S
 Sprint - Left Shift
 Jump - Space Bar
 Load - L
 
-Alternatively you can change which keys move mario in directkeys.py but I don't
-recommend this.
 
 There should also be a quick save option. Make sure you set the quick save to the
 start screen. This will ensure when the current run is done the game will
@@ -43,3 +43,9 @@ In the command line type
 
 Then quickly reselect the mario game, sending the command line to the background.
 Let the game run and watch mario improve!
+
+At the end of  each population the best mario will be saved in the saved_marios
+directory, to load a mario rather than create a new population you just have
+to pass the saved object as a command line argument
+
+> python smb.py saved_mario
