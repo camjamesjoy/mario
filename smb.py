@@ -17,7 +17,7 @@ POPULATION_ITERATIONS = 500
 FIRST_LAYER_SIZE = 100
 HIDDEN_LAYER_ONE_SIZE = 64
 HIDDEN_LAYER_TWO_SIZE = 16
-OUTPUT_LAYER_SIZE = 3
+OUTPUT_LAYER_SIZE = 4
 MUTATION_CHANCE = 0.1 # chance that a mario will be selected for mutation
 POPULATION_SIZE = 25
 START_WAIT_TIME = 3
@@ -55,7 +55,7 @@ class MarioGame:
             print("PLAYING MARIO")
             population = self.play_mario(population)
             population.sort(key=lambda Mario: Mario.fitness) # sort population by fitness
-            self.save_mario(population[-1], f"{SAVED_MARIO_FOLDER}\\mario" + str(iteration))
+            self.save_mario(population[-1], f"{SAVED_MARIO_FOLDER}\\mario_{str(iteration)}_{str(int(population[-1].fitness))}")
             print(f"THE BEST MARIO SO FAR HAS A FITNESS FUNCTION OF {population[-1].fitness}")
             population = self.evolve_mario(population)
 

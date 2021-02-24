@@ -17,6 +17,7 @@ MAX_INDICES_TO_ADD = 5
 FORWARD = 0
 BACKWARD = 1
 JUMP = 2
+HEIGHT = 3
 SLICE_WIDTH = 5
 MAX_PIXELS_POSSIBLE = 700
 UPDATE_TIMER = 0.5
@@ -121,7 +122,10 @@ class Mario(NeuralNetwork):
             self.fitness += pixels_moved * UPDATE_TIMER
             if pixels_moved < MIN_PIXELS_MOVED:
                 self.num_times_min_exceded += 1
-                print(f"\t\tMARIO HAS EARNED A STRIKE BECAUSE HE ONLY TRAVEL {pixels_moved} PIXELS, {NUM_TIMES_MIN_CAN_BE_EXCEDED - self.num_times_min_exceded} REMAINING UNTIL HE DIES")
+                print(f"\t\tMARIO HAS EARNED A STRIKE BECAUSE HE ONLY TRAVELED {pixels_moved} PIXELS, {NUM_TIMES_MIN_CAN_BE_EXCEDED - self.num_times_min_exceded} REMAINING UNTIL HE DIES")
+            else:
+                self.num_times_min_exceded = 0 # reset the min if mario moved forward more then the min number of pixels
+                print("\t\t RESETING COUNTER BECAUSE MARIO MOVED FORWARD")
             if self.num_times_min_exceded >= NUM_TIMES_MIN_CAN_BE_EXCEDED:
                 self.alive = False
                 conn.send([False, self.fitness])
@@ -207,7 +211,12 @@ class Mario(NeuralNetwork):
             next_action = self.jump_backward
         elif(output[FORWARD] < 0.5 and output[BACKWARD] < 0.5 and output[JUMP] >= 0.5):
             next_action = self.jump
-        next_action()
+
+
+        if next_action == self.jump or next_action == self.jump_backward or next_action == self.jump_forward:
+            next_action(output[HEIGHT] / 2)
+        else:
+            next_action()
 
     @staticmethod
     def sigmoid(x):
@@ -242,28 +251,28 @@ class Mario(NeuralNetwork):
         keyboard.release(Keys.JUMP.value)
 
     @staticmethod
-    def jump():
+    def jump(height):
         keyboard.press(Keys.JUMP.value)
-        time.sleep(0.3)
+        time.sleep(height)
         keyboard.release(Keys.JUMP.value)
         keyboard.release(Keys.RIGHT.value)
         keyboard.release(Keys.LEFT.value)
 
     @staticmethod
-    def jump_forward():
+    def jump_forward(height):
         keyboard.press(Keys.SPRINT.value)
         keyboard.press(Keys.RIGHT.value)
         keyboard.press(Keys.JUMP.value)
-        time.sleep(0.3)
+        time.sleep(height)
         keyboard.release(Keys.JUMP.value)
         keyboard.release(Keys.LEFT.value)
 
     @staticmethod
-    def jump_backward():
+    def jump_backward(height):
         keyboard.press(Keys.SPRINT.value)
         keyboard.press(Keys.LEFT.value)
         keyboard.press(Keys.JUMP.value)
-        time.sleep(0.3)
+        time.sleep(height)
         keyboard.release(Keys.JUMP.value)
         keyboard.release(Keys.RIGHT.value)
 
